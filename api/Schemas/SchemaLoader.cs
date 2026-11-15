@@ -54,8 +54,13 @@ public static partial class SchemaLoader
             foreach (var (fieldName, f) in file.Fields)
                 if (ParseField(fieldName, f, errors) is { } field) fields.Add(field);
 
+        // "display": the field that names a record in the UI (default: first string field).
+        var display = file.Display ?? fields.FirstOrDefault(f => f.Type == FieldType.String)?.Name ?? fields.FirstOrDefault()?.Name ?? "id";
+        if (file.Display is not null && fields.Count > 0 && fields.All(f => f.Name != file.Display))
+            errors.Add($"\"display\" \"{file.Display}\" is not one of the fields.");
+
         if (errors.Count > 0) throw new SchemaException(string.Join(" ", errors));
-        return new Schema(name, collection, file.Title ?? Humanize(collection), fields, fileName);
+        return new Schema(name, collection, file.Title ?? Humanize(collection), display, fields, fileName);
     }
 
     private static Field? ParseField(string name, FieldFile f, List<string> errors)
@@ -68,7 +73,7 @@ public static partial class SchemaLoader
 
         if (f.Type is null || f.Type != f.Type.ToLowerInvariant() || !Enum.TryParse<FieldType>(f.Type, true, out var type))
         {
-            errors.Add($"{at} \"type\" must be one of string, text, email, number, integer, boolean, date, enum.");
+            errors.Add($"{at} \"type\" must be one of string, text, email, number, integer, boolean, date, enum, ref.");
             return null;
         }
 
@@ -84,6 +89,9 @@ public static partial class SchemaLoader
         Only(isNumeric, f.Min, "min", "number and integer");
         Only(isNumeric, f.Max, "max", "number and integer");
         Only(type == FieldType.Enum, f.Values, "values", "enum");
+        Only(type == FieldType.Ref, f.Ref, "ref", "ref");
+        if (type == FieldType.Ref && (f.Ref is null || !NameRx().IsMatch(f.Ref)))
+            errors.Add($"{at} ref fields need \"ref\": \"<schema name>\" (e.g. \"supplier\").");
 
         if (f.MinLength < 0 || f.MaxLength < 1) errors.Add($"{at} lengths must be positive.");
         if (f.MinLength > f.MaxLength) errors.Add($"{at} \"minLength\" is greater than \"maxLength\".");
@@ -102,7 +110,7 @@ public static partial class SchemaLoader
         JsonElement? defaultValue = f.Default is { ValueKind: not JsonValueKind.Null } d ? d : null;
         var field = new Field(
             name, type, f.Label ?? Humanize(name), f.Required ?? false, f.Unique ?? false, f.ShowInTable ?? true,
-            f.MinLength, f.MaxLength, f.Pattern, f.Min, f.Max, f.Values, defaultValue);
+            f.MinLength, f.MaxLength, f.Pattern, f.Min, f.Max, f.Values, defaultValue, f.Ref);
 
         if (defaultValue is { } dv && !DocumentMapper.TryConvert(field, dv, out _, out var err))
         {

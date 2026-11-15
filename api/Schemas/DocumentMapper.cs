@@ -1,11 +1,16 @@
 using System.Globalization;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Api.Data;
 using MongoDB.Bson;
 
 namespace Api.Schemas;
 
-/// <summary>Converts between JSON request/response bodies and BSON documents, validating against a schema.</summary>
+/// <summary>What a write will change: fields to set, fields to clear, and validation errors.</summary>
+public sealed record DocumentChanges(
+    Dictionary<string, BsonValue> Set, List<string> Unset, Dictionary<string, string> Errors);
+
+/// <summary>Converts between JSON bodies and BSON documents, validating against a schema.</summary>
 public static class DocumentMapper
 {
     public const string EmailPattern = @"^[^@\s]+@[^@\s]+\.[^@\s]+$";
@@ -13,18 +18,19 @@ public static class DocumentMapper
     private static readonly HashSet<string> SystemKeys = ["id", "createdAt", "updatedAt"];
 
     /// <summary>
-    /// Validates a full document body. Returns BSON values for every field that has a value
-    /// (defaults applied), plus errors keyed by field name.
+    /// Full (create / PUT): every field is considered; defaults apply; missing optional fields are cleared.
+    /// Partial (PATCH): only fields present in the body are considered; null or "" clears an optional field.
     /// </summary>
-    public static (Dictionary<string, BsonValue> Values, Dictionary<string, string> Errors) FromJson(Schema s, JsonElement body)
+    public static DocumentChanges FromJson(Schema s, JsonElement body, bool partial = false)
     {
-        var values = new Dictionary<string, BsonValue>();
+        var set = new Dictionary<string, BsonValue>();
+        var unset = new List<string>();
         var errors = new Dictionary<string, string>();
 
         if (body.ValueKind != JsonValueKind.Object)
         {
             errors[""] = "The request body must be a JSON object.";
-            return (values, errors);
+            return new DocumentChanges(set, unset, errors);
         }
 
         foreach (var p in body.EnumerateObject())
@@ -33,16 +39,20 @@ public static class DocumentMapper
 
         foreach (var f in s.Fields)
         {
-            JsonElement? value = body.TryGetProperty(f.Name, out var v) && !IsEmpty(v) ? v : f.Default;
+            var present = body.TryGetProperty(f.Name, out var v);
+            if (partial && !present) continue;
+
+            JsonElement? value = present && !IsEmpty(v) ? v : partial ? null : f.Default;
             if (value is null)
             {
                 if (f.Required) errors[f.Name] = $"The {f.Label} field is required.";
+                else unset.Add(f.Name);
                 continue;
             }
-            if (TryConvert(f, value.Value, out var bson, out var error)) values[f.Name] = bson;
+            if (TryConvert(f, value.Value, out var bson, out var error)) set[f.Name] = bson;
             else errors[f.Name] = error!;
         }
-        return (values, errors);
+        return new DocumentChanges(set, unset, errors);
     }
 
     private static bool IsEmpty(JsonElement v) =>
@@ -91,6 +101,15 @@ public static class DocumentMapper
                 { error = $"{label} must be a date (e.g. 2026-11-15)."; return false; }
                 bson = new BsonDateTime(dto.UtcDateTime);
                 return true;
+
+            case FieldType.Ref:
+                // Accept an id string, or an included object ({ "id": "...", ... }) sent back as-is.
+                var idText = v.ValueKind == JsonValueKind.String ? v.GetString()
+                    : v.ValueKind == JsonValueKind.Object && v.TryGetProperty("id", out var idProp) && idProp.ValueKind == JsonValueKind.String ? idProp.GetString()
+                    : null;
+                if (!ObjectId.TryParse(idText, out var oid)) { error = $"{label} must be the id of a {f.Ref}."; return false; }
+                bson = new BsonObjectId(oid);
+                return true;
         }
         error = $"{label} has an unsupported type.";
         return false;
@@ -102,20 +121,21 @@ public static class DocumentMapper
         return error is null;
     }
 
-    /// <summary>BSON → JSON-friendly dictionary: id first, schema fields in order, then timestamps.</summary>
-    public static Dictionary<string, object?> ToJson(Schema s, BsonDocument doc)
+    /// <summary>BSON → API record: id first, schema fields in order, then timestamps.</summary>
+    public static Record ToJson(Schema s, BsonDocument doc)
     {
-        var o = new Dictionary<string, object?> { ["id"] = doc.GetValue("_id", BsonNull.Value).ToString() };
+        var r = new Record { ["id"] = doc.GetValue("_id", BsonNull.Value).ToString() };
         foreach (var f in s.Fields)
-            if (doc.TryGetValue(f.Name, out var v)) o[f.Name] = ToDotNet(v);
-        o["createdAt"] = doc.TryGetValue("createdAt", out var c) ? ToDotNet(c) : null;
-        o["updatedAt"] = doc.TryGetValue("updatedAt", out var u) ? ToDotNet(u) : null;
-        return o;
+            if (doc.TryGetValue(f.Name, out var v)) r[f.Name] = ToDotNet(v);
+        r["createdAt"] = doc.TryGetValue("createdAt", out var c) ? ToDotNet(c) : null;
+        r["updatedAt"] = doc.TryGetValue("updatedAt", out var u) ? ToDotNet(u) : null;
+        return r;
     }
 
     private static object? ToDotNet(BsonValue v) => v.BsonType switch
     {
         BsonType.Null => null,
+        BsonType.ObjectId => v.AsObjectId.ToString(),
         BsonType.DateTime => v.ToUniversalTime(),
         BsonType.String => v.AsString,
         BsonType.Boolean => v.AsBoolean,

@@ -12,7 +12,8 @@ namespace Api.Schemas;
 public class SchemaSync(MongoContext ctx, ILogger<SchemaSync> log)
 {
     public const string MirrorCollection = "_schemas";
-    private const string IndexPrefix = "uniq_";
+    private const string UniquePrefix = "uniq_";
+    private const string RefPrefix = "ref_";
 
     private static readonly JsonSerializerOptions MirrorJson = new(JsonSerializerDefaults.Web)
     {
@@ -46,31 +47,29 @@ public class SchemaSync(MongoContext ctx, ILogger<SchemaSync> log)
             }, cancellationToken: ct);
 
         var col = db.GetCollection<BsonDocument>(s.Collection);
+        // Managed indexes: uniq_<field> (unique) and ref_<field> (fast lookups for includes / delete checks).
         var existing = (await (await col.Indexes.ListAsync(ct)).ToListAsync(ct))
-            .Select(i => i["name"].AsString).Where(n => n.StartsWith(IndexPrefix)).ToHashSet();
-        var wanted = s.Fields.Where(f => f.Unique).ToDictionary(f => IndexPrefix + f.Name);
+            .Select(i => i["name"].AsString).Where(n => n.StartsWith(UniquePrefix) || n.StartsWith(RefPrefix)).ToHashSet();
+        var wanted = s.Fields.Where(f => f.Unique).Select(f => (Name: UniquePrefix + f.Name, Field: f, Unique: true))
+            .Concat(s.Fields.Where(f => f.Type == FieldType.Ref && !f.Unique).Select(f => (Name: RefPrefix + f.Name, Field: f, Unique: false)))
+            .ToList();
 
-        foreach (var name in existing.Except(wanted.Keys))
+        foreach (var name in existing.Except(wanted.Select(w => w.Name)))
             await col.Indexes.DropOneAsync(name, ct);
 
-        foreach (var (name, f) in wanted)
+        foreach (var (name, f, unique) in wanted)
         {
             if (existing.Contains(name)) continue;
             try
             {
-                await col.Indexes.CreateOneAsync(new CreateIndexModel<BsonDocument>(
-                    new BsonDocument(f.Name, 1),
-                    new CreateIndexOptions<BsonDocument>
-                    {
-                        Name = name,
-                        Unique = true,
-                        // Optional fields may be absent on many documents; only enforce where a value exists.
-                        PartialFilterExpression = new BsonDocument(f.Name, new BsonDocument("$exists", true)),
-                    }), cancellationToken: ct);
+                var opts = new CreateIndexOptions<BsonDocument> { Name = name, Unique = unique };
+                // Optional fields may be absent on many documents; only enforce uniqueness where a value exists.
+                if (unique) opts.PartialFilterExpression = new BsonDocument(f.Name, new BsonDocument("$exists", true));
+                await col.Indexes.CreateOneAsync(new CreateIndexModel<BsonDocument>(new BsonDocument(f.Name, 1), opts), cancellationToken: ct);
             }
             catch (MongoCommandException e)
             {
-                problems.Add($"Unique index on \"{f.Name}\" not created: {e.ErrorMessage}");
+                problems.Add($"Index {name} not created: {e.ErrorMessage}");
             }
         }
 
@@ -115,6 +114,7 @@ public class SchemaSync(MongoContext ctx, ILogger<SchemaSync> log)
             FieldType.Integer => ["int", "long"],
             FieldType.Boolean => ["bool"],
             FieldType.Date => ["date"],
+            FieldType.Ref => ["objectId"],
             _ => new[] { "string" },
         });
         if (!f.Required) types.Add("null");

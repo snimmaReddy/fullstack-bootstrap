@@ -6,7 +6,7 @@ export interface Entity {
 }
 
 export type FieldType =
-  | 'text' | 'email' | 'number' | 'integer' | 'textarea' | 'checkbox' | 'date' | 'select';
+  | 'text' | 'email' | 'number' | 'integer' | 'textarea' | 'checkbox' | 'date' | 'select' | 'ref';
 
 export interface FieldConfig<T> {
   name: Extract<keyof T, string>;
@@ -20,6 +20,8 @@ export interface FieldConfig<T> {
   max?: number | null;
   minLength?: number | null;
   maxLength?: number | null;
+  ref?: string | null; // for 'ref': the referenced schema name
+  refDisplay?: string; // for 'ref': which field of the referenced record to show
 }
 
 /** Everything the UI needs to render a CRUD page for one entity. */
@@ -28,4 +30,5 @@ export interface ResourceConfig<T extends Entity = any> {
   title: string;
   endpoint: string; // e.g. "/api/data/contact"
   fields: FieldConfig<T>[];
+  listQuery?: string; // appended to list requests, e.g. "?include=supplier"
 }

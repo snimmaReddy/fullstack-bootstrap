@@ -1,0 +1,21 @@
+{
+  "$schema": "./schema.schema.json",
+  "name": "supplier",
+  "title": "Suppliers",
+  "display": "name",
+  "fields": {
+    "name": {
+      "type": "string",
+      "required": true,
+      "unique": true,
+      "maxLength": 100
+    },
+    "country": {
+      "type": "string",
+      "maxLength": 60
+    },
+    "email": {
+      "type": "email"
+    }
+  }
+}

@@ -2,7 +2,7 @@ import type { FieldType, ResourceConfig } from '../types';
 
 /** Shapes returned by GET /api/schemas (see api/Schemas/SchemaDefinition.cs). */
 export type SchemaFieldType =
-  | 'string' | 'text' | 'email' | 'number' | 'integer' | 'boolean' | 'date' | 'enum';
+  | 'string' | 'text' | 'email' | 'number' | 'integer' | 'boolean' | 'date' | 'enum' | 'ref';
 
 export interface SchemaField {
   name: string;
@@ -18,12 +18,14 @@ export interface SchemaField {
   max: number | null;
   values: string[] | null;
   default: unknown;
+  ref: string | null;
 }
 
 export interface Schema {
   name: string;
   collection: string;
   title: string;
+  display: string;
   file: string;
   fields: SchemaField[];
 }
@@ -42,6 +44,7 @@ const UI_TYPE: Record<SchemaFieldType, FieldType> = {
   boolean: 'checkbox',
   date: 'date',
   enum: 'select',
+  ref: 'ref',
 };
 
 export async function fetchSchemas(): Promise<{ schemas: Schema[]; errors: SchemaError[] }> {
@@ -51,11 +54,14 @@ export async function fetchSchemas(): Promise<{ schemas: Schema[]; errors: Schem
 }
 
 /** Adapts a JSON schema to the generic page config used by ResourcePage. */
-export function schemaToResource(s: Schema): ResourceConfig {
+export function schemaToResource(s: Schema, all: Schema[]): ResourceConfig {
+  const refs = s.fields.filter((f) => f.type === 'ref').map((f) => f.name);
   return {
     key: s.name,
     title: s.title,
     endpoint: `/api/data/${s.name}`,
+    // Embed referenced records so tables can show their names instead of ids.
+    listQuery: refs.length ? `?include=${refs.join(',')}` : '',
     fields: s.fields.map((f) => ({
       name: f.name,
       label: f.label,
@@ -68,6 +74,8 @@ export function schemaToResource(s: Schema): ResourceConfig {
       max: f.max,
       minLength: f.minLength,
       maxLength: f.maxLength,
+      ref: f.ref,
+      refDisplay: all.find((o) => o.name === f.ref)?.display ?? 'id',
     })),
   };
 }

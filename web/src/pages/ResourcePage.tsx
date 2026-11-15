@@ -5,7 +5,7 @@ import type { Entity, ResourceConfig } from '../types';
 
 /** Generic page: create form + list, driven entirely by a ResourceConfig. */
 export function ResourcePage<T extends Entity>({ config }: { config: ResourceConfig<T> }) {
-  const { items, loading, error, create, remove } = useResource<T>(config.endpoint);
+  const { items, loading, error, create, remove } = useResource<T>(config.endpoint, config.listQuery);
 
   return (
     <section>

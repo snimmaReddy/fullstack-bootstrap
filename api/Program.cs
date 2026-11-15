@@ -2,6 +2,7 @@ using System.Text;
 using System.Threading.RateLimiting;
 using Api.Auth;
 using Api.Data;
+using Api.Endpoints;
 using Api.Models;
 using Api.Repositories;
 using Api.Schemas;
@@ -24,6 +25,11 @@ builder.Services.Configure<SchemaOptions>(builder.Configuration.GetSection("Sche
 builder.Services.AddSingleton<SchemaSync>();
 builder.Services.AddSingleton<SchemaRegistry>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<SchemaRegistry>());
+
+// Reusable data helpers for any schema (inject Db into controllers/endpoints) + 400/404/409 error mapping.
+builder.Services.AddSingleton<Db>();
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<DataErrorHandler>();
 
 // ---- Authentication ----
 var jwt = builder.Configuration.GetSection("Jwt").Get<JwtSettings>() ?? new JwtSettings();
@@ -84,6 +90,8 @@ builder.Services.AddCors(o => o.AddDefaultPolicy(p => p
 
 var app = builder.Build();
 
+app.UseExceptionHandler();
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();               // /openapi/v1.json
@@ -95,4 +103,5 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();
 app.MapControllers();
+app.MapReportEndpoints();
 app.Run();

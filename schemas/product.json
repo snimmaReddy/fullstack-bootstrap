@@ -31,6 +31,10 @@
         "service"
       ]
     },
+    "supplier": {
+      "type": "ref",
+      "ref": "supplier"
+    },
     "inStock": {
       "type": "boolean",
       "default": true
@@ -46,5 +50,6 @@
       "label": "Internal notes",
       "showInTable": false
     }
-  }
+  },
+  "display": "name"
 }

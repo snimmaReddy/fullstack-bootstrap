@@ -141,6 +141,11 @@ public sealed class SchemaRegistry(
             }
         }
 
+        foreach (var s in next.Values)
+        foreach (var f in s.Fields.Where(f => f.Type == FieldType.Ref && !next.ContainsKey(f.Ref!)))
+            errors.Add(new SchemaError("schemas/" + s.FileName,
+                $"Field \"{f.Name}\" refers to schema \"{f.Ref}\", which isn't loaded. Writes and includes of this field will fail until it is."));
+
         var changed = next.Values.Where(s => !previous.TryGetValue(s.Name, out var p) || Fingerprint(p) != Fingerprint(s)).ToList();
         var removed = previous.Keys.Except(next.Keys).ToList();
 

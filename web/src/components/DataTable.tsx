@@ -9,6 +9,10 @@ interface Props<T extends Entity> {
 function format<T>(field: FieldConfig<T>, v: unknown) {
   if (v == null || v === '') return '—';
   if (typeof v === 'boolean') return v ? 'Yes' : 'No';
+  if (field.type === 'ref' && typeof v === 'object') {
+    const ref = v as Record<string, unknown>;
+    return String(ref[field.refDisplay ?? 'id'] ?? ref.id);
+  }
   if (field.type === 'date') return new Date(String(v)).toLocaleDateString(undefined, { timeZone: 'UTC' });
   return String(v);
 }

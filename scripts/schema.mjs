@@ -2,8 +2,9 @@
 // Manage JSON schemas in schemas/. While the API runs in Development it picks up changes on save.
 //
 //   node scripts/schema.mjs new <name> field:type[!] ...     create schemas/<name>.json
-//        types: string text email number integer boolean date enum   (! = required)
+//        types: string text email number integer boolean date enum ref   (! = required)
 //        enum:  category:enum=hardware,software,service
+//        ref:   supplier:ref=supplier   (id of a record in another schema)
 //        e.g.   node scripts/schema.mjs new product name:string! price:number inStock:boolean
 //   node scripts/schema.mjs list                             list schemas
 //   node scripts/schema.mjs delete <name> [--drop-data] [--yes]
@@ -19,7 +20,7 @@ import { fileURLToPath } from 'node:url';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const dir = join(root, 'schemas');
 const META = 'schema.schema.json';
-const TYPES = ['string', 'text', 'email', 'number', 'integer', 'boolean', 'date', 'enum'];
+const TYPES = ['string', 'text', 'email', 'number', 'integer', 'boolean', 'date', 'enum', 'ref'];
 const ALIASES = { bool: 'boolean', int: 'integer' };
 
 const [cmd, ...rest] = process.argv.slice(2);
@@ -47,7 +48,7 @@ function cmdNew() {
   const fields = {};
   for (const spec of specs) {
     const m = spec.match(/^([a-z][a-zA-Z0-9]*):([a-z]+)(!)?(?:=(.+))?$/);
-    if (!m) die(`Bad field "${spec}". Format: name:type[!]  or  name:enum[!]=a,b,c`);
+    if (!m) die(`Bad field "${spec}". Format: name:type[!]  or  name:enum[!]=a,b,c  or  name:ref[!]=schema`);
     const [, field, rawType, required, values] = m;
     const type = ALIASES[rawType] ?? rawType;
     if (!TYPES.includes(type)) die(`Unknown type "${rawType}" for "${field}". Types: ${TYPES.join(', ')}`);
@@ -58,7 +59,10 @@ function cmdNew() {
     if (type === 'enum') {
       if (!values) die(`Enum field "${field}" needs values, e.g.  ${field}:enum=a,b,c`);
       def.values = values.split(',').map((v) => v.trim()).filter(Boolean);
-    } else if (values) die(`Only enum fields take "=values" ("${spec}").`);
+    } else if (type === 'ref') {
+      if (!/^[a-z][a-z0-9]*$/.test(values ?? '')) die(`Ref field "${field}" needs a target schema, e.g.  ${field}:ref=supplier`);
+      def.ref = values;
+    } else if (values) die(`Only enum and ref fields take "=..." ("${spec}").`);
     fields[field] = def;
   }
 

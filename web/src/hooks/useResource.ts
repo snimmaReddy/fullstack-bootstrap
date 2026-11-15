@@ -3,7 +3,7 @@ import { crudApi } from '../api/client';
 import type { Entity } from '../types';
 
 /** List + mutate state for one resource. Reloads the list after each change. */
-export function useResource<T extends Entity>(endpoint: string) {
+export function useResource<T extends Entity>(endpoint: string, listQuery = '') {
   const api = useMemo(() => crudApi<T>(endpoint), [endpoint]);
   const [items, setItems] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
@@ -12,14 +12,14 @@ export function useResource<T extends Entity>(endpoint: string) {
   const reload = useCallback(async () => {
     setLoading(true);
     try {
-      setItems(await api.list());
+      setItems(await api.list(listQuery));
       setError(null);
     } catch (e) {
       setError((e as Error).message);
     } finally {
       setLoading(false);
     }
-  }, [api]);
+  }, [api, listQuery]);
 
   useEffect(() => {
     reload();

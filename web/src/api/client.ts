@@ -34,7 +34,7 @@ async function errorMessage(res: Response): Promise<string> {
 /** Typed CRUD client for any endpoint backed by CrudController<T>. */
 export function crudApi<T extends Entity>(endpoint: string) {
   return {
-    list: () => request<T[]>(endpoint),
+    list: (query = '') => request<T[]>(endpoint + query),
     get: (id: string) => request<T>(`${endpoint}/${id}`),
     create: (data: Partial<T>) => request<T>(endpoint, { method: 'POST', body: JSON.stringify(data) }),
     update: (id: string, data: Partial<T>) =>

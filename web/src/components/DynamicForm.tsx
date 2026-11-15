@@ -1,5 +1,6 @@
-import { useState, type FormEvent } from 'react';
-import type { FieldConfig } from '../types';
+import { useEffect, useState, type FormEvent } from 'react';
+import { crudApi } from '../api/client';
+import type { Entity, FieldConfig } from '../types';
 
 type Values = Record<string, string | boolean>;
 
@@ -67,6 +68,8 @@ export function DynamicForm<T>({ fields, initial, submitLabel = 'Save', onSubmit
         let input;
         if (f.type === 'textarea')
           input = <textarea {...common} rows={3} value={value} maxLength={f.maxLength ?? undefined} onChange={onChange} />;
+        else if (f.type === 'ref')
+          input = <RefSelect {...common} value={value} onChange={onChange} schema={f.ref!} display={f.refDisplay ?? 'id'} />;
         else if (f.type === 'select')
           input = (
             <select {...common} value={value} onChange={onChange}>
@@ -93,5 +96,35 @@ export function DynamicForm<T>({ fields, initial, submitLabel = 'Save', onSubmit
       {error && <p className="error">{error}</p>}
       <button type="submit" disabled={busy}>{busy ? 'Saving…' : submitLabel}</button>
     </form>
+  );
+}
+
+interface RefSelectProps {
+  id: string;
+  name: string;
+  required?: boolean;
+  value: string;
+  onChange: (e: { target: { value: string } }) => void;
+  schema: string;
+  display: string;
+}
+
+/** Dropdown of records from another schema, labelled by that schema's display field. */
+function RefSelect({ schema, display, ...props }: RefSelectProps) {
+  const [options, setOptions] = useState<{ id: string; label: string }[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    crudApi<Entity & Record<string, unknown>>(`/api/data/${schema}`)
+      .list(`?limit=500&sort=${encodeURIComponent(display)}`)
+      .then((rows) => setOptions(rows.map((r) => ({ id: r.id!, label: String(r[display] ?? r.id) }))))
+      .catch((e: Error) => setError(e.message));
+  }, [schema, display]);
+
+  return (
+    <select {...props} onChange={props.onChange} title={error ?? undefined}>
+      <option value="">{error ? `Couldn't load ${schema}s` : 'Select…'}</option>
+      {options.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+    </select>
   );
 }

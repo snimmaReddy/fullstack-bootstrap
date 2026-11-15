@@ -5,9 +5,14 @@
   "description": "One file per entity. The API turns it into a MongoDB collection (with validation), CRUD endpoints at /api/data/{name}, and a UI page.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["name", "fields"],
+  "required": [
+    "name",
+    "fields"
+  ],
   "properties": {
-    "$schema": { "type": "string" },
+    "$schema": {
+      "type": "string"
+    },
     "name": {
       "type": "string",
       "pattern": "^[a-z][a-z0-9]*$",
@@ -18,49 +23,254 @@
       "pattern": "^[a-z][a-zA-Z0-9_]*$",
       "description": "MongoDB collection name. Defaults to name + \"s\"."
     },
-    "title": { "type": "string", "description": "Nav label and page heading. Defaults to the collection name." },
+    "title": {
+      "type": "string",
+      "description": "Nav label and page heading. Defaults to the collection name."
+    },
     "fields": {
       "type": "object",
       "minProperties": 1,
-      "description": "Field name (camelCase) → definition. id, createdAt and updatedAt are added automatically.",
-      "propertyNames": { "pattern": "^[a-z][a-zA-Z0-9]*$", "not": { "enum": ["id", "createdAt", "updatedAt"] } },
-      "additionalProperties": { "$ref": "#/definitions/field" }
+      "description": "Field name (camelCase) \u2192 definition. id, createdAt and updatedAt are added automatically.",
+      "propertyNames": {
+        "pattern": "^[a-z][a-zA-Z0-9]*$",
+        "not": {
+          "enum": [
+            "id",
+            "createdAt",
+            "updatedAt"
+          ]
+        }
+      },
+      "additionalProperties": {
+        "$ref": "#/definitions/field"
+      }
+    },
+    "display": {
+      "type": "string",
+      "description": "Field that names a record in the UI (dropdowns, tables). Defaults to the first string field."
     }
   },
   "definitions": {
     "field": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["type"],
+      "required": [
+        "type"
+      ],
       "properties": {
         "type": {
-          "enum": ["string", "text", "email", "number", "integer", "boolean", "date", "enum"],
-          "description": "string: short text · text: long text · email · number: decimal · integer: whole number · boolean · date · enum: one of \"values\""
+          "enum": [
+            "string",
+            "text",
+            "email",
+            "number",
+            "integer",
+            "boolean",
+            "date",
+            "enum",
+            "ref"
+          ],
+          "description": "string: short text \u00b7 text: long text \u00b7 email \u00b7 number: decimal \u00b7 integer: whole number \u00b7 boolean \u00b7 date \u00b7 enum: one of \"values\" \u00b7 ref: id of a record in another schema (set \"ref\")"
         },
-        "required": { "type": "boolean", "description": "Must have a value (after applying \"default\")." },
-        "unique": { "type": "boolean", "description": "No two documents may share a value (unique index uniq_<field>)." },
-        "default": { "description": "Value used when none is given. Must be valid for the field's type." },
-        "label": { "type": "string", "description": "UI label and error-message name. Defaults to the field name in words." },
-        "showInTable": { "type": "boolean", "description": "Show as a column in the UI table (default true)." },
-        "minLength": { "type": "integer", "minimum": 0, "description": "string, text" },
-        "maxLength": { "type": "integer", "minimum": 1, "description": "string, text" },
-        "pattern": { "type": "string", "description": "string only: regular expression the value must match." },
-        "min": { "type": "number", "description": "number, integer" },
-        "max": { "type": "number", "description": "number, integer" },
+        "required": {
+          "type": "boolean",
+          "description": "Must have a value (after applying \"default\")."
+        },
+        "unique": {
+          "type": "boolean",
+          "description": "No two documents may share a value (unique index uniq_<field>)."
+        },
+        "default": {
+          "description": "Value used when none is given. Must be valid for the field's type."
+        },
+        "label": {
+          "type": "string",
+          "description": "UI label and error-message name. Defaults to the field name in words."
+        },
+        "showInTable": {
+          "type": "boolean",
+          "description": "Show as a column in the UI table (default true)."
+        },
+        "minLength": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "string, text"
+        },
+        "maxLength": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "string, text"
+        },
+        "pattern": {
+          "type": "string",
+          "description": "string only: regular expression the value must match."
+        },
+        "min": {
+          "type": "number",
+          "description": "number, integer"
+        },
+        "max": {
+          "type": "number",
+          "description": "number, integer"
+        },
         "values": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "minItems": 1,
           "uniqueItems": true,
           "description": "enum only: the allowed values."
+        },
+        "ref": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9]*$",
+          "description": "ref only: the schema this field points to, e.g. \"supplier\". Read it with ?include=<field>."
         }
       },
       "allOf": [
-        { "if": { "properties": { "type": { "const": "enum" } } }, "then": { "required": ["values"] } },
-        { "if": { "properties": { "type": { "not": { "const": "enum" } } } }, "then": { "not": { "required": ["values"] } } },
-        { "if": { "properties": { "type": { "not": { "enum": ["string", "text"] } } } }, "then": { "not": { "anyOf": [{ "required": ["minLength"] }, { "required": ["maxLength"] }] } } },
-        { "if": { "properties": { "type": { "not": { "const": "string" } } } }, "then": { "not": { "required": ["pattern"] } } },
-        { "if": { "properties": { "type": { "not": { "enum": ["number", "integer"] } } } }, "then": { "not": { "anyOf": [{ "required": ["min"] }, { "required": ["max"] }] } } }
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "enum"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "values"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "not": {
+                  "const": "enum"
+                }
+              }
+            }
+          },
+          "then": {
+            "not": {
+              "required": [
+                "values"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "not": {
+                  "enum": [
+                    "string",
+                    "text"
+                  ]
+                }
+              }
+            }
+          },
+          "then": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "minLength"
+                  ]
+                },
+                {
+                  "required": [
+                    "maxLength"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "not": {
+                  "const": "string"
+                }
+              }
+            }
+          },
+          "then": {
+            "not": {
+              "required": [
+                "pattern"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "not": {
+                  "enum": [
+                    "number",
+                    "integer"
+                  ]
+                }
+              }
+            }
+          },
+          "then": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "min"
+                  ]
+                },
+                {
+                  "required": [
+                    "max"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "ref"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "ref"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "not": {
+                  "const": "ref"
+                }
+              }
+            }
+          },
+          "then": {
+            "not": {
+              "required": [
+                "ref"
+              ]
+            }
+          }
+        }
       ]
     }
   }

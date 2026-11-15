@@ -16,7 +16,7 @@ export function useSchemas() {
   const load = useCallback(async () => {
     try {
       const { schemas, errors } = await fetchSchemas();
-      setState({ resources: schemas.map(schemaToResource), errors, loading: false, failed: null });
+      setState({ resources: schemas.map((s) => schemaToResource(s, schemas)), errors, loading: false, failed: null });
     } catch (e) {
       setState((s) => ({ ...s, loading: false, failed: (e as Error).message }));
     }

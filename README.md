@@ -2,7 +2,10 @@
 
 This boilerplate has a C# .NET 11 API, MongoDB 8 and a React 19 + TypeScript UI. Each entity is **one JSON file** in `schemas/`, and the API, the MongoDB validation and the UI page all come from that file.
 
-For the design, see [PLAN.md](PLAN.md) (phase 1: API, UI, auth) and [PLAN-json-schemas.md](PLAN-json-schemas.md) (phase 2: JSON schemas, database lock-down).
+For the design, see:
+- [PLAN.md](PLAN.md): phase 1, the API, UI and auth
+- [PLAN-json-schemas.md](PLAN-json-schemas.md): phase 2, JSON schemas and the database lock-down
+- [PLAN-data-helpers.md](PLAN-data-helpers.md): phase 3, the reusable DB helpers, query filters and links between schemas
 
 ## Prerequisites
 
@@ -56,9 +59,10 @@ To **update** a schema, edit its file and save. While the API runs in Developmen
 }
 ```
 
-- **Field types:** `string`, `text`, `email`, `number`, `integer`, `boolean`, `date`, `enum`.
+- **Field types:** `string`, `text`, `email`, `number`, `integer`, `boolean`, `date`, `enum`, `ref` (a link to another schema).
 - **Options for every type:** `required`, `unique`, `default`, `label`, `showInTable`.
-- **Type-specific options:** `minLength`, `maxLength`, `pattern`, `min`, `max`, `values`.
+- **Type-specific options:** `minLength`, `maxLength`, `pattern`, `min`, `max`, `values`, `ref`.
+- **Schema-level `display`:** names the field shown for a record in dropdowns and tables. It defaults to the first string field.
 - **Automatic fields:** `id`, `createdAt` and `updatedAt` are added for you.
 - **Editor help:** `schemas/schema.schema.json` gives autocomplete and error highlighting in VS Code.
 
@@ -66,9 +70,33 @@ Each schema gets:
 
 | | |
 | --- | --- |
-| API | `GET/POST /api/data/{name}`, `GET/PUT/DELETE /api/data/{name}/{id}` (`?limit=&skip=&sort=-price`) |
-| MongoDB | Collection `{name}s` with a `$jsonSchema` validator, `uniq_*` unique indexes, and a copy in `_schemas` |
+| API | `GET/POST /api/data/{name}`, `GET/PUT/PATCH/DELETE /api/data/{name}/{id}` (filters below) |
+| MongoDB | Collection `{name}s` with a `$jsonSchema` validator, `uniq_*` / `ref_*` indexes, and a copy in `_schemas` |
 | UI | A page at `/{name}` with a form and a table |
+
+### Query string (any schema)
+
+| Example | Meaning |
+| --- | --- |
+| `?category=hardware` | equals |
+| `?price.lt=100&price.gte=10` | `lt`, `lte`, `gt`, `gte`, `ne` |
+| `?category.in=hardware,service` | one of |
+| `?name.contains=key` | case-insensitive substring (text fields) |
+| `?sort=-price,name&limit=20&skip=40` | sort and page (default: newest first, limit 100, max 500) |
+| `?include=supplier` | embed the linked record (a `ref` field) |
+| `?include=products` | on a supplier: embed every product that links to it |
+
+Values are converted to the field's type. An unknown field, operator or include, or a value of the wrong type, returns a 400 naming the problem.
+
+### Linking schemas
+
+```json
+"supplier": { "type": "ref", "ref": "supplier" }
+```
+
+- **Storage:** the link is stored as an ObjectId, and the API reads and writes it as an id string.
+- **Integrity:** writes are rejected if the linked record doesn't exist. Deleting a record that others still link to returns 409.
+- **UI:** forms show a dropdown of the linked schema, and tables show the linked record's display name.
 
 **Changing a schema with existing data:** there are no automatic migrations.
 - Adding optional fields is safe.
@@ -99,6 +127,29 @@ The `_schemas` collection holds each full definition.
 In production, set `Mongo__ConnectionString` and `Jwt__Key` as environment variables.
 
 The schema data endpoints need no user sign-in. That's fine while everything is bound to localhost. Before exposing the API publicly, add an API-side gate such as an API key or user sign-in.
+
+## Reusable DB helpers for custom APIs
+
+Inject `Db` into any controller or minimal-API endpoint. It works with every schema, validates writes, and throws errors that become 400/404/409 responses automatically, so endpoints need no try/catch.
+
+```csharp
+app.MapGet("/api/reports/low-stock", (Db db) =>
+    db.List("product", Query.Where("quantity", Op.Lt, 10).And("inStock", true).Sort("quantity").Include("supplier")));
+```
+
+| Method | Does |
+| --- | --- |
+| `db.List(schema, query?)` | Filtered, sorted, paged list (`Query.Where(...).And(...).Sort(...).Take(n).Skip(n).Include(...)`) |
+| `db.Get(schema, id, includes...)` | One record or `null` |
+| `db.FindOne(schema, query)` / `db.Count(...)` / `db.Exists(...)` | Lookups |
+| `db.Create(schema, data)` | Insert; `data` can be an anonymous object, a dictionary or JSON |
+| `db.Update(schema, id, data)` | Full replace of the schema fields |
+| `db.Patch(schema, id, data)` | Only the given fields; `null` clears one |
+| `db.Delete(schema, id)` | Refuses (409) while other records link to it |
+
+Records come back as `Record` (a dictionary: `id`, fields, `createdAt`, `updatedAt`, plus includes). See `api/Endpoints/ReportEndpoints.cs` for two examples:
+- `GET /api/reports/low-stock?below=10`
+- `GET /api/reports/suppliers/{id}/summary`
 
 ## Other API features
 
