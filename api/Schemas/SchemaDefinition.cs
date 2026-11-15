@@ -49,6 +49,9 @@ public sealed class SchemaException(string message) : Exception(message);
 /// <summary>What the API returns for a schema (also mirrored to the _schemas collection).</summary>
 public sealed record SchemaDto(string Name, string Collection, string Title, string Display, string File, IReadOnlyList<FieldDto> Fields)
 {
+    /// <summary>API route served by this schema's controller (e.g. "/api/products"), or null if it has none.</summary>
+    public string? Endpoint { get; init; }
+
     public static SchemaDto From(Schema s) => new(
         s.Name, s.Collection, s.Title, s.Display, "schemas/" + s.FileName,
         s.Fields.Select(f => new FieldDto(

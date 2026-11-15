@@ -2,7 +2,6 @@ using System.Text;
 using System.Threading.RateLimiting;
 using Api.Auth;
 using Api.Data;
-using Api.Endpoints;
 using Api.Models;
 using Api.Repositories;
 using Api.Schemas;
@@ -26,7 +25,7 @@ builder.Services.AddSingleton<SchemaSync>();
 builder.Services.AddSingleton<SchemaRegistry>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<SchemaRegistry>());
 
-// Reusable data helpers for any schema (inject Db into controllers/endpoints) + 400/404/409 error mapping.
+// Reusable data helpers for any schema (inject Db into controllers) + 400/404/409 error mapping.
 builder.Services.AddSingleton<Db>();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<DataErrorHandler>();
@@ -103,5 +102,4 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();
 app.MapControllers();
-app.MapReportEndpoints();
 app.Run();

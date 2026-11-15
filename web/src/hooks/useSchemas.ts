@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { fetchSchemas, schemaToResource, type SchemaError } from '../api/schemas';
+import { fetchSchemas, schemaToResource, type Schema, type SchemaError } from '../api/schemas';
 import type { ResourceConfig } from '../types';
 
 interface State {
@@ -16,7 +16,9 @@ export function useSchemas() {
   const load = useCallback(async () => {
     try {
       const { schemas, errors } = await fetchSchemas();
-      setState({ resources: schemas.map((s) => schemaToResource(s, schemas)), errors, loading: false, failed: null });
+      // Only schemas served by a controller get a page.
+      const served = schemas.filter((s): s is Schema & { endpoint: string } => s.endpoint !== null);
+      setState({ resources: served.map((s) => schemaToResource(s, schemas)), errors, loading: false, failed: null });
     } catch (e) {
       setState((s) => ({ ...s, loading: false, failed: (e as Error).message }));
     }

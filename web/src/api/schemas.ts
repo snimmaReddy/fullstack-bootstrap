@@ -27,6 +27,7 @@ export interface Schema {
   title: string;
   display: string;
   file: string;
+  endpoint: string | null; // e.g. "/api/products"; null when no controller serves this schema
   fields: SchemaField[];
 }
 
@@ -53,13 +54,13 @@ export async function fetchSchemas(): Promise<{ schemas: Schema[]; errors: Schem
   return res.json();
 }
 
-/** Adapts a JSON schema to the generic page config used by ResourcePage. */
-export function schemaToResource(s: Schema, all: Schema[]): ResourceConfig {
+/** Adapts a JSON schema (that has a controller) to the generic page config used by ResourcePage. */
+export function schemaToResource(s: Schema & { endpoint: string }, all: Schema[]): ResourceConfig {
   const refs = s.fields.filter((f) => f.type === 'ref').map((f) => f.name);
   return {
     key: s.name,
     title: s.title,
-    endpoint: `/api/data/${s.name}`,
+    endpoint: s.endpoint,
     // Embed referenced records so tables can show their names instead of ids.
     listQuery: refs.length ? `?include=${refs.join(',')}` : '',
     fields: s.fields.map((f) => ({
@@ -76,6 +77,7 @@ export function schemaToResource(s: Schema, all: Schema[]): ResourceConfig {
       maxLength: f.maxLength,
       ref: f.ref,
       refDisplay: all.find((o) => o.name === f.ref)?.display ?? 'id',
+      refEndpoint: all.find((o) => o.name === f.ref)?.endpoint ?? null,
     })),
   };
 }

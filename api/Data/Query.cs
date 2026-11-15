@@ -74,11 +74,15 @@ public sealed class Query
         }
         return q;
 
-        static string[] List(string? v) => (v ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        static string[] List(string? v) => SplitList(v);
         static int ParseInt(string key, string? v) =>
             int.TryParse(v, NumberStyles.Integer, CultureInfo.InvariantCulture, out var n) ? n
                 : throw new ValidationError(key, $"\"{key}\" must be a whole number.");
     }
+
+    /// <summary>"supplier, products" → ["supplier", "products"]; null → [].</summary>
+    public static string[] SplitList(string? csv) =>
+        (csv ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
     public BsonDocument BuildFilter(Schema s)
     {

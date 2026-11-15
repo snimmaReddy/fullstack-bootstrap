@@ -8,7 +8,7 @@ namespace Api.Controllers;
 
 [ApiController]
 [AllowAnonymous]
-[Route("api/[controller]")]
+[Route("api/health")]
 public class HealthController(MongoContext ctx) : ControllerBase
 {
     [HttpGet]

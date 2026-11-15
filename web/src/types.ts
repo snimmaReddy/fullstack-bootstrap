@@ -22,13 +22,14 @@ export interface FieldConfig<T> {
   maxLength?: number | null;
   ref?: string | null; // for 'ref': the referenced schema name
   refDisplay?: string; // for 'ref': which field of the referenced record to show
+  refEndpoint?: string | null; // for 'ref': API of the referenced schema, e.g. "/api/suppliers"
 }
 
 /** Everything the UI needs to render a CRUD page for one entity. */
 export interface ResourceConfig<T extends Entity = any> {
-  key: string; // URL path, e.g. "contact" -> /contact
+  key: string; // UI path, e.g. "contact" -> /contact
   title: string;
-  endpoint: string; // e.g. "/api/data/contact"
+  endpoint: string; // e.g. "/api/contacts"
   fields: FieldConfig<T>[];
   listQuery?: string; // appended to list requests, e.g. "?include=supplier"
 }

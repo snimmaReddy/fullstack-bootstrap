@@ -1,6 +1,6 @@
 # Reusable DB Helpers, Simple CRUD and Cross-Collection Reads — Plan
 
-_As of 2026-11-15 · Status: implemented (exception types are named `ValidationError`, `NotFoundError`, `ConflictError`) · Follows [PLAN-json-schemas.md](PLAN-json-schemas.md)_
+_As of 2026-11-15 · Note: the shared `api/data/{schema}` route and `ReportEndpoints.cs` were later replaced by one controller per API — see [PLAN-controllers.md](PLAN-controllers.md). The `Db` helpers, `Query`, `ref` and `include` are unchanged. · Status: implemented (exception types are named `ValidationError`, `NotFoundError`, `ConflictError`) · Follows [PLAN-json-schemas.md](PLAN-json-schemas.md)_
 
 ## 1. Goal
 

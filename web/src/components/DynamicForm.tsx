@@ -69,7 +69,8 @@ export function DynamicForm<T>({ fields, initial, submitLabel = 'Save', onSubmit
         if (f.type === 'textarea')
           input = <textarea {...common} rows={3} value={value} maxLength={f.maxLength ?? undefined} onChange={onChange} />;
         else if (f.type === 'ref')
-          input = <RefSelect {...common} value={value} onChange={onChange} schema={f.ref!} display={f.refDisplay ?? 'id'} />;
+          input = <RefSelect {...common} value={value} onChange={onChange} schema={f.ref!}
+            endpoint={f.refEndpoint ?? null} display={f.refDisplay ?? 'id'} />;
         else if (f.type === 'select')
           input = (
             <select {...common} value={value} onChange={onChange}>
@@ -106,20 +107,22 @@ interface RefSelectProps {
   value: string;
   onChange: (e: { target: { value: string } }) => void;
   schema: string;
+  endpoint: string | null;
   display: string;
 }
 
 /** Dropdown of records from another schema, labelled by that schema's display field. */
-function RefSelect({ schema, display, ...props }: RefSelectProps) {
+function RefSelect({ schema, endpoint, display, ...props }: RefSelectProps) {
   const [options, setOptions] = useState<{ id: string; label: string }[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(endpoint ? null : `no API for ${schema}`);
 
   useEffect(() => {
-    crudApi<Entity & Record<string, unknown>>(`/api/data/${schema}`)
+    if (!endpoint) return;
+    crudApi<Entity & Record<string, unknown>>(endpoint)
       .list(`?limit=500&sort=${encodeURIComponent(display)}`)
       .then((rows) => setOptions(rows.map((r) => ({ id: r.id!, label: String(r[display] ?? r.id) }))))
       .catch((e: Error) => setError(e.message));
-  }, [schema, display]);
+  }, [endpoint, display]);
 
   return (
     <select {...props} onChange={props.onChange} title={error ?? undefined}>

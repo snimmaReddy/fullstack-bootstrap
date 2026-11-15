@@ -6,6 +6,7 @@ For the design, see:
 - [PLAN.md](PLAN.md): phase 1, the API, UI and auth
 - [PLAN-json-schemas.md](PLAN-json-schemas.md): phase 2, JSON schemas and the database lock-down
 - [PLAN-data-helpers.md](PLAN-data-helpers.md): phase 3, the reusable DB helpers, query filters and links between schemas
+- [PLAN-controllers.md](PLAN-controllers.md): phase 4, one controller per API (`api/products`, `api/suppliers`, …)
 
 ## Prerequisites
 
@@ -30,14 +31,23 @@ cd api && dotnet run             # API → http://localhost:5080 (docs at /scala
 cd web && npm run dev            # UI  → http://localhost:5173
 ```
 
-## Schemas: create, update, delete
+## Schemas and controllers: create, update, delete
 
 ```bash
 node scripts/schema.mjs new product name:string! price:number category:enum=hardware,software inStock:boolean
-node scripts/schema.mjs list
-node scripts/schema.mjs delete product              # removes the file, keeps the data
+                                                    # → schemas/product.json + api/Controllers/ProductsController.cs
+node scripts/schema.mjs new note text:text! --no-controller   # schema only, no API yet
+node scripts/schema.mjs controller note             # add a controller later
+node scripts/schema.mjs list                        # schemas, their API routes and controllers
+node scripts/schema.mjs delete product              # removes the schema file, keeps the data; asks about the controller
 node scripts/schema.mjs delete product --drop-data  # also drops the collection (asks to confirm)
 ```
+
+**Each API has its own standard ASP.NET Core controller,** for example [ProductsController.cs](api/Controllers/ProductsController.cs) at `api/products`:
+- **Actions:** `GetAll`, `GetById`, `Create`, `Update`, `Patch` and `Delete`. Each one is a line or two that calls the reusable `Db` helpers.
+- **Editing:** the generated controller is regular code. Add product-specific actions to it, or remove actions you don't want.
+- **Restart:** a new or changed controller needs an API restart (or `dotnet watch`).
+- **No controller:** a schema without one still gets its MongoDB collection and validator, but no API and no UI page.
 
 To **update** a schema, edit its file and save. While the API runs in Development, it reloads within about a second, updates MongoDB's validator and indexes, and the UI picks up the change when you switch back to the tab. If you save an invalid file, the API keeps serving the last valid version and shows the error at `/api/schemas` and in a banner in the UI.
 
@@ -70,11 +80,11 @@ Each schema gets:
 
 | | |
 | --- | --- |
-| API | `GET/POST /api/data/{name}`, `GET/PUT/PATCH/DELETE /api/data/{name}/{id}` (filters below) |
+| API (once it has a controller) | `GET/POST /api/{collection}`, `GET/PUT/PATCH/DELETE /api/{collection}/{id}` (filters below) |
 | MongoDB | Collection `{name}s` with a `$jsonSchema` validator, `uniq_*` / `ref_*` indexes, and a copy in `_schemas` |
 | UI | A page at `/{name}` with a form and a table |
 
-### Query string (any schema)
+### Query string (every controller's `GetAll`)
 
 | Example | Meaning |
 | --- | --- |
@@ -130,11 +140,12 @@ The schema data endpoints need no user sign-in. That's fine while everything is 
 
 ## Reusable DB helpers for custom APIs
 
-Inject `Db` into any controller or minimal-API endpoint. It works with every schema, validates writes, and throws errors that become 400/404/409 responses automatically, so endpoints need no try/catch.
+Inject `Db` into any controller. It works with every schema, validates writes, and throws errors that become 400/404/409 responses automatically, so actions need no try/catch.
 
 ```csharp
-app.MapGet("/api/reports/low-stock", (Db db) =>
-    db.List("product", Query.Where("quantity", Op.Lt, 10).And("inStock", true).Sort("quantity").Include("supplier")));
+[HttpGet("low-stock")]
+public async Task<ActionResult<List<Record>>> LowStock([FromQuery] int below = 10) =>
+    await db.List("product", Query.Where("quantity", Op.Lt, below).And("inStock", true).Sort("quantity").Include("supplier"));
 ```
 
 | Method | Does |
@@ -147,7 +158,7 @@ app.MapGet("/api/reports/low-stock", (Db db) =>
 | `db.Patch(schema, id, data)` | Only the given fields; `null` clears one |
 | `db.Delete(schema, id)` | Refuses (409) while other records link to it |
 
-Records come back as `Record` (a dictionary: `id`, fields, `createdAt`, `updatedAt`, plus includes). See `api/Endpoints/ReportEndpoints.cs` for two examples:
+Records come back as `Record` (a dictionary: `id`, fields, `createdAt`, `updatedAt`, plus includes). See [ReportsController.cs](api/Controllers/ReportsController.cs) for two examples:
 - `GET /api/reports/low-stock?below=10`
 - `GET /api/reports/suppliers/{id}/summary`
 
