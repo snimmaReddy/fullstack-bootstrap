@@ -1,6 +1,6 @@
 # Upstart Boilerplate — Implementation Plan
 
-_As of 2026-11-15 · Status: revised after review (API authentication added, latest versions; UI login pages deferred)_
+_As of 2026-11-15 · Status: implemented. Phase 2 (JSON schemas, MongoDB auth) is in [PLAN-json-schemas.md](PLAN-json-schemas.md) and replaces the typed Contacts sample and `new-resource.mjs` described here._
 
 ## 1. Goal and scope
 

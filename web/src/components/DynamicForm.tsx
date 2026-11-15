@@ -10,17 +10,17 @@ interface Props<T> {
   onSubmit: (data: Partial<T>) => Promise<void>;
 }
 
-const emptyValues = <T,>(fields: FieldConfig<T>[], initial?: Partial<T>): Values =>
+const startValues = <T,>(fields: FieldConfig<T>[], initial?: Partial<T>): Values =>
   Object.fromEntries(
     fields.map((f) => {
-      const v = initial?.[f.name] as unknown;
+      const v = (initial?.[f.name] as unknown) ?? f.default;
       return [f.name, f.type === 'checkbox' ? Boolean(v) : v == null ? '' : String(v)];
     }),
   );
 
 /** Renders a form from field config and converts values to the right JS types on submit. */
 export function DynamicForm<T>({ fields, initial, submitLabel = 'Save', onSubmit }: Props<T>) {
-  const [values, setValues] = useState<Values>(() => emptyValues(fields, initial));
+  const [values, setValues] = useState<Values>(() => startValues(fields, initial));
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -31,14 +31,14 @@ export function DynamicForm<T>({ fields, initial, submitLabel = 'Save', onSubmit
     const data: Record<string, unknown> = {};
     for (const f of fields) {
       const v = values[f.name];
-      if (f.type === 'number') data[f.name] = v === '' ? null : Number(v);
+      if (f.type === 'number' || f.type === 'integer') data[f.name] = v === '' ? null : Number(v);
       else if (f.type === 'checkbox') data[f.name] = v;
       else data[f.name] = v === '' ? null : v;
     }
     setBusy(true);
     try {
       await onSubmit(data as Partial<T>);
-      setValues(emptyValues(fields, initial));
+      setValues(startValues(fields, initial));
       setError(null);
     } catch (err) {
       setError((err as Error).message);
@@ -52,25 +52,41 @@ export function DynamicForm<T>({ fields, initial, submitLabel = 'Save', onSubmit
       {fields.map((f) => {
         const id = `f-${f.name}`;
         const common = { id, name: f.name, required: f.required };
+        const value = values[f.name] as string;
+        const onChange = (e: { target: { value: string } }) => set(f.name, e.target.value);
+
         if (f.type === 'checkbox')
           return (
             <label key={f.name} className="check">
-              <input {...common} type="checkbox" checked={values[f.name] as boolean}
+              <input {...common} required={false} type="checkbox" checked={values[f.name] as boolean}
                 onChange={(e) => set(f.name, e.target.checked)} />
               {f.label}
             </label>
           );
+
+        let input;
+        if (f.type === 'textarea')
+          input = <textarea {...common} rows={3} value={value} maxLength={f.maxLength ?? undefined} onChange={onChange} />;
+        else if (f.type === 'select')
+          input = (
+            <select {...common} value={value} onChange={onChange}>
+              <option value="">Select…</option>
+              {(f.options ?? []).map((o) => <option key={o} value={o}>{o}</option>)}
+            </select>
+          );
+        else
+          input = (
+            <input {...common} value={value} onChange={onChange}
+              type={f.type === 'integer' ? 'number' : f.type ?? 'text'}
+              step={f.type === 'integer' ? 1 : f.type === 'number' ? 'any' : undefined}
+              min={f.min ?? undefined} max={f.max ?? undefined}
+              minLength={f.minLength ?? undefined} maxLength={f.maxLength ?? undefined} />
+          );
+
         return (
           <div key={f.name} className="field">
             <label htmlFor={id}>{f.label}{f.required && ' *'}</label>
-            {f.type === 'textarea' ? (
-              <textarea {...common} rows={3} value={values[f.name] as string}
-                onChange={(e) => set(f.name, e.target.value)} />
-            ) : (
-              <input {...common} type={f.type ?? 'text'} value={values[f.name] as string}
-                step={f.type === 'number' ? 'any' : undefined}
-                onChange={(e) => set(f.name, e.target.value)} />
-            )}
+            {input}
           </div>
         );
       })}

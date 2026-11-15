@@ -1,9 +1,7 @@
 import type { ResourceConfig } from '../types';
-import contacts from './contacts';
-// @scaffold:imports
 
-/** Register a resource here and it gets a route + nav link automatically. */
-export const resources: ResourceConfig[] = [
-  contacts,
-  // @scaffold:list
-];
+/**
+ * Hand-written resources backed by a typed C# CrudController<T>.
+ * Schema-driven resources (schemas/*.json) are loaded from /api/schemas automatically.
+ */
+export const resources: ResourceConfig[] = [];

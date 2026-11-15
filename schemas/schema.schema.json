@@ -1,0 +1,67 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "upstart-entity-schema",
+  "title": "Upstart entity schema",
+  "description": "One file per entity. The API turns it into a MongoDB collection (with validation), CRUD endpoints at /api/data/{name}, and a UI page.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["name", "fields"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*$",
+      "description": "Lower-case singular name; must match the file name. Used in URLs: /api/data/{name} and /{name}."
+    },
+    "collection": {
+      "type": "string",
+      "pattern": "^[a-z][a-zA-Z0-9_]*$",
+      "description": "MongoDB collection name. Defaults to name + \"s\"."
+    },
+    "title": { "type": "string", "description": "Nav label and page heading. Defaults to the collection name." },
+    "fields": {
+      "type": "object",
+      "minProperties": 1,
+      "description": "Field name (camelCase) → definition. id, createdAt and updatedAt are added automatically.",
+      "propertyNames": { "pattern": "^[a-z][a-zA-Z0-9]*$", "not": { "enum": ["id", "createdAt", "updatedAt"] } },
+      "additionalProperties": { "$ref": "#/definitions/field" }
+    }
+  },
+  "definitions": {
+    "field": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "enum": ["string", "text", "email", "number", "integer", "boolean", "date", "enum"],
+          "description": "string: short text · text: long text · email · number: decimal · integer: whole number · boolean · date · enum: one of \"values\""
+        },
+        "required": { "type": "boolean", "description": "Must have a value (after applying \"default\")." },
+        "unique": { "type": "boolean", "description": "No two documents may share a value (unique index uniq_<field>)." },
+        "default": { "description": "Value used when none is given. Must be valid for the field's type." },
+        "label": { "type": "string", "description": "UI label and error-message name. Defaults to the field name in words." },
+        "showInTable": { "type": "boolean", "description": "Show as a column in the UI table (default true)." },
+        "minLength": { "type": "integer", "minimum": 0, "description": "string, text" },
+        "maxLength": { "type": "integer", "minimum": 1, "description": "string, text" },
+        "pattern": { "type": "string", "description": "string only: regular expression the value must match." },
+        "min": { "type": "number", "description": "number, integer" },
+        "max": { "type": "number", "description": "number, integer" },
+        "values": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1,
+          "uniqueItems": true,
+          "description": "enum only: the allowed values."
+        }
+      },
+      "allOf": [
+        { "if": { "properties": { "type": { "const": "enum" } } }, "then": { "required": ["values"] } },
+        { "if": { "properties": { "type": { "not": { "const": "enum" } } } }, "then": { "not": { "required": ["values"] } } },
+        { "if": { "properties": { "type": { "not": { "enum": ["string", "text"] } } } }, "then": { "not": { "anyOf": [{ "required": ["minLength"] }, { "required": ["maxLength"] }] } } },
+        { "if": { "properties": { "type": { "not": { "const": "string" } } } }, "then": { "not": { "required": ["pattern"] } } },
+        { "if": { "properties": { "type": { "not": { "enum": ["number", "integer"] } } } }, "then": { "not": { "anyOf": [{ "required": ["min"] }, { "required": ["max"] }] } } }
+      ]
+    }
+  }
+}

@@ -14,7 +14,20 @@ public class HealthController(MongoContext ctx) : ControllerBase
     [HttpGet]
     public async Task<IActionResult> Get()
     {
-        await ctx.Database.RunCommandAsync<BsonDocument>(new BsonDocument("ping", 1));
-        return Ok(new { status = "ok", database = ctx.Database.DatabaseNamespace.DatabaseName });
+        var database = ctx.Database.DatabaseNamespace.DatabaseName;
+        try
+        {
+            // listCollections (unlike ping) needs valid credentials, so this also checks the API's DB login.
+            await ctx.Database.ListCollectionNamesAsync();
+            return Ok(new { status = "ok", database });
+        }
+        catch (MongoAuthenticationException)
+        {
+            return StatusCode(503, new { status = "error", database, error = "MongoDB rejected the API's credentials (check Mongo:ConnectionString)." });
+        }
+        catch (Exception e) when (e is MongoException or TimeoutException)
+        {
+            return StatusCode(503, new { status = "error", database, error = "MongoDB is unreachable: " + e.Message });
+        }
     }
 }

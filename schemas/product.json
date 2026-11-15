@@ -1,0 +1,50 @@
+{
+  "$schema": "./schema.schema.json",
+  "name": "product",
+  "title": "Products",
+  "fields": {
+    "name": {
+      "type": "string",
+      "required": true,
+      "maxLength": 100
+    },
+    "sku": {
+      "type": "string",
+      "unique": true,
+      "pattern": "^[A-Z0-9-]+$",
+      "label": "SKU"
+    },
+    "price": {
+      "type": "number",
+      "min": 0
+    },
+    "quantity": {
+      "type": "integer",
+      "min": 0,
+      "default": 0
+    },
+    "category": {
+      "type": "enum",
+      "values": [
+        "hardware",
+        "software",
+        "service"
+      ]
+    },
+    "inStock": {
+      "type": "boolean",
+      "default": true
+    },
+    "releasedOn": {
+      "type": "date"
+    },
+    "contactEmail": {
+      "type": "email"
+    },
+    "notes": {
+      "type": "text",
+      "label": "Internal notes",
+      "showInTable": false
+    }
+  }
+}

@@ -4,6 +4,7 @@ using Api.Auth;
 using Api.Data;
 using Api.Models;
 using Api.Repositories;
+using Api.Schemas;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
@@ -17,6 +18,12 @@ builder.Services.AddSingleton<MongoContext>();
 builder.Services.AddHostedService<MongoIndexInitializer>();
 // One open-generic registration: IRepository<AnyEntity> works with no extra wiring.
 builder.Services.AddScoped(typeof(IRepository<>), typeof(MongoRepository<>));
+
+// ---- JSON schemas (schemas/*.json → collections, validators, /api/data/{name}) ----
+builder.Services.Configure<SchemaOptions>(builder.Configuration.GetSection("Schemas"));
+builder.Services.AddSingleton<SchemaSync>();
+builder.Services.AddSingleton<SchemaRegistry>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<SchemaRegistry>());
 
 // ---- Authentication ----
 var jwt = builder.Configuration.GetSection("Jwt").Get<JwtSettings>() ?? new JwtSettings();

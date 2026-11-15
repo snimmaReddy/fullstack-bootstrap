@@ -19,3 +19,7 @@ table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
 th, td { text-align: left; padding: 0.5rem; border-bottom: 1px solid #eaeef2; }
 .error { color: #cf222e; margin: 0; }
 .muted { color: #656d76; }
+select { font: inherit; padding: 0.45rem 0.6rem; border: 1px solid #d0d7de; border-radius: 6px; background: #fff; }
+.banner { background: #fff8c5; border-bottom: 1px solid #d4a72c; padding: 0.5rem 1.5rem; font-size: 0.875rem; }
+.banner p { margin: 0.25rem 0; }
+code { background: #eaeef2; padding: 0 0.3rem; border-radius: 4px; }
