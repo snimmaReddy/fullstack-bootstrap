@@ -1,0 +1,15 @@
+# .NET
+api/bin/
+api/obj/
+# Node
+web/node_modules/
+web/dist/
+web/*.tsbuildinfo
+# Misc
+.DS_Store
+.vs/
+.vscode/
+*.user
+# Local secrets / data
+api/appsettings.Development.json
+.data/
