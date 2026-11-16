@@ -6,7 +6,7 @@ import dayjs from 'dayjs';
 import { Link, Outlet, useNavigate } from 'react-router-dom';
 import { useDeleteRecord, useList, useRecord } from '../api/hooks';
 import { recordTitle } from '../api/schemas';
-import { ConfirmDelete } from '../components/ConfirmDelete';
+import { ConfirmDelete } from '../components/ui';
 import { EntityTable } from '../components/EntityTable';
 import { PageHeader } from '../components/PageHeader';
 import { ErrorState } from '../components/StateViews';

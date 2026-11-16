@@ -1,13 +1,11 @@
-import { Button, Card, CloseButton, Group, Pagination, Select, Text, TextInput } from '@mantine/core';
-import { useDebouncedValue } from '@mantine/hooks';
-import { IconPlus, IconSearch } from '@tabler/icons-react';
-import { useEffect, useState } from 'react';
+import { Button, Card, Group, Pagination, Select, Text } from '@mantine/core';
+import { IconPlus } from '@tabler/icons-react';
 import { Outlet, useNavigate, useSearchParams } from 'react-router-dom';
 import { searchField, useList, type Target } from '../api/hooks';
 import type { SchemaField } from '../api/schemas';
 import { EntityTable } from '../components/EntityTable';
 import { PageHeader } from '../components/PageHeader';
-import { EmptyState, ErrorState } from '../components/StateViews';
+import { EmptyState, ErrorState, SearchInput } from '../components/ui';
 import { RefSelect } from './fields';
 import { useCurrentEntity } from './useCurrentEntity';
 import { NotFoundPage } from '../pages/NotFoundPage';
@@ -18,18 +16,10 @@ export function EntityListPage() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
 
-  const urlSearch = params.get('q') ?? '';
-  const [search, setSearch] = useState(urlSearch);
-  const [debounced] = useDebouncedValue(search, 300);
+  const search = params.get('q') ?? '';
   const sort = params.get('sort') ?? entity?.defaultSort;
   const page = Math.max(1, Number(params.get('page') ?? 1));
   const filters = Object.fromEntries([...params].filter(([k]) => k.startsWith('f.')).map(([k, v]) => [k.slice(2), v]));
-
-  // Mirror the debounced search box into the URL (and reset to page 1).
-  useEffect(() => {
-    if (debounced !== urlSearch) update({ q: debounced || null, page: null });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debounced]);
 
   const update = (changes: Record<string, string | null>) =>
     setParams((p) => {
@@ -40,7 +30,7 @@ export function EntityListPage() {
 
   const target: Target | null = entity ? { schema: entity.schema, endpoint: entity.endpoint, path: entity.path } : null;
   const list = useList(target, {
-    search: debounced,
+    search,
     filters,
     sort,
     page,
@@ -55,7 +45,7 @@ export function EntityListPage() {
   const pages = Math.max(1, Math.ceil(total / entity.pageSize));
   const from = total === 0 ? 0 : (page - 1) * entity.pageSize + 1;
   const to = Math.min(total, page * entity.pageSize);
-  const filtering = !!debounced || Object.keys(filters).length > 0;
+  const filtering = !!search || Object.keys(filters).length > 0;
   const singular = entity.schema.name;
   const canSearch = searchField(entity.schema);
 
@@ -75,12 +65,10 @@ export function EntityListPage() {
       <Card padding={0}>
         <Group p="md" gap="sm" wrap="wrap">
           {canSearch && (
-            <TextInput
+            <SearchInput
               placeholder={`Search ${canSearch.label.toLowerCase()}…`}
-              leftSection={<IconSearch size={16} />}
               value={search}
-              onChange={(e) => setSearch(e.currentTarget.value)}
-              rightSection={search ? <CloseButton size="sm" onClick={() => setSearch('')} /> : null}
+              onChange={(q) => update({ q: q || null, page: null })}
               w={{ base: '100%', sm: 280 }}
             />
           )}
@@ -90,7 +78,7 @@ export function EntityListPage() {
           ))}
           {filtering && (
             <Button variant="subtle" color="gray" size="sm"
-              onClick={() => { setSearch(''); setParams(sort ? { sort } : {}, { replace: true }); }}>
+              onClick={() => setParams(sort ? { sort } : {}, { replace: true })}>
               Clear
             </Button>
           )}

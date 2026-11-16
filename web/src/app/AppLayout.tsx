@@ -1,6 +1,6 @@
 import { Alert, AppShell, Badge, Box, Burger, Group, NavLink, ScrollArea, Skeleton, Text, ThemeIcon } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { IconAlertTriangle, IconBolt, IconLayoutDashboard, IconPointFilled } from '@tabler/icons-react';
+import { IconAlertTriangle, IconBolt, IconComponents, IconLayoutDashboard, IconPointFilled } from '@tabler/icons-react';
 import { useEffect } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useCount, useEntities, useHealth } from '../api/hooks';
@@ -62,6 +62,13 @@ export function AppLayout() {
               leftSection={p.icon && <p.icon size={18} stroke={1.5} />} />
           ))}
         </AppShell.Section>
+        {import.meta.env.DEV && (
+          <AppShell.Section>
+            <SectionLabel>Developer</SectionLabel>
+            <NavLink component={Link} to="/ui-gallery" label="UI gallery" active={isActive('/ui-gallery')}
+              leftSection={<IconComponents size={18} stroke={1.5} />} />
+          </AppShell.Section>
+        )}
       </AppShell.Navbar>
 
       <AppShell.Main bg="gray.0">

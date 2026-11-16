@@ -10,6 +10,7 @@ For the design, see:
 - [PLAN-data-helpers.md](PLAN-data-helpers.md): phase 3, the reusable DB helpers, query filters and links between schemas
 - [PLAN-controllers.md](PLAN-controllers.md): phase 4, one controller per API (`api/<collection>`)
 - [PLAN-ui.md](PLAN-ui.md): phase 5, the Mantine UI with left navigation and the list → detail → edit workflow
+- [PLAN-components.md](PLAN-components.md): phase 6, the reusable UI component kit and gallery
 
 ## Prerequisites
 
@@ -143,10 +144,42 @@ The UI is built on [Mantine](https://mantine.dev). It has:
 | Support a new field type | Add it to [web/src/entity/fields.tsx](web/src/entity/fields.tsx) (form input + display). |
 | Change the look | [web/src/app/theme.ts](web/src/app/theme.ts): app name, brand colour, font, radius. |
 
-Reusable building blocks for custom pages:
-- `components/`: `PageHeader`, `EntityTable`, `StatCard`, `ConfirmDelete`, `EmptyState`, `ErrorState`
-- `entity/fields.tsx`: `FieldInput`, `FieldValue`, `RefSelect`
-- `api/hooks.ts`: `useList`, `useRecord`, `useSaveRecord`, `useDeleteRecord`, `useCount`
+### UI component kit
+
+Generic, reusable components for building new pages live in [web/src/components/ui/](web/src/components/ui/). Everything comes from one import:
+
+```tsx
+import { Section, SplitLayout, StatGroup, ChartCard, BarChart, Timeline, useConfirm, notify } from '../components/ui';
+```
+
+| Group | Components |
+| --- | --- |
+| Layout | `PageHeader`, `Section`, `SplitLayout`, `TabsPanel` (tab kept in the URL), `Toolbar` |
+| Data display | `StatGroup`, `StatCard`, `KeyValueList`, `CardGrid`, `EntityTable`, `StatusBadge`, `Timeline`, `ProgressStat`, `AvatarText`, `EmptyState`, `ErrorState` |
+| Charts | `ChartCard`, `BarChart`, `LineChart`, `DonutChart` (Mantine Charts) |
+| Forms | `SearchInput`, `FormSection`, `DateRangeInput`, `FileDrop`, `Wizard`, `FieldInput`, `FieldValue`, `RefSelect` |
+| Feedback | `useConfirm()` / `ConfirmDialog` / `ConfirmDelete`, `notify.success/info/warning/error`, `InlineAlert` |
+
+- **See them live:** in development, the sidebar has **Developer → UI gallery** (`/ui-gallery`). It shows every component with example data and a usage snippet. It isn't included in production builds.
+- **Data for custom pages:** use the hooks in `api/hooks.ts` (`useList`, `useRecord`, `useCount`, `useSaveRecord`, `useDeleteRecord`).
+
+Example custom page:
+
+```tsx
+// web/src/pages/OverviewPage.tsx, then add { path: 'overview', label: 'Overview', component: OverviewPage } to customPages
+export function OverviewPage() {
+  return (
+    <>
+      <PageHeader title="Overview" />
+      <StatGroup items={[{ label: 'Open', value: 42, change: 12 }]} />
+      <SplitLayout
+        main={<ChartCard title="Per month"><BarChart data={rows} dataKey="month" series={['count']} /></ChartCard>}
+        side={<Section title="Recent activity"><Timeline items={events} /></Section>}
+      />
+    </>
+  );
+}
+```
 
 ## Database access and Compass
 
