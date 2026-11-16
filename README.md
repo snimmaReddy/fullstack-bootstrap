@@ -4,6 +4,8 @@ This boilerplate has a C# .NET 11 API, MongoDB 8 and a React 19 + TypeScript + M
 
 The `product`, `supplier` and `contact` schemas are only sample data. Replace them with your own.
 
+**Building a feature?** Start with [HOWTO.md](HOWTO.md). It walks from a use case to a working full-stack feature (schema → API → business rules → UI pages → custom screen), with a tested worked example.
+
 For the design, see:
 - [PLAN.md](PLAN.md): phase 1, the API, UI and auth
 - [PLAN-json-schemas.md](PLAN-json-schemas.md): phase 2, JSON schemas and the database lock-down
