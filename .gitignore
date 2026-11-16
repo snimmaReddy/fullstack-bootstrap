@@ -1,15 +1,33 @@
-# .NET
-api/bin/
-api/obj/
-# Node
-web/node_modules/
-web/dist/
-web/*.tsbuildinfo
-# Misc
-.DS_Store
-.vs/
-.vscode/
-*.user
-# Local secrets / data
+# ---------- Secrets & local data (never commit) ----------
 api/appsettings.Development.json
+api/appsettings.*.local.json
+.env
+.env.*
+!.env.example
+*.pem
+*.key
 .data/
+
+# ---------- .NET build output ----------
+**/bin/
+**/obj/
+*.user
+.vs/
+
+# ---------- Node / web build output ----------
+node_modules/
+web/dist/
+*.tsbuildinfo
+.vite/
+
+# ---------- Test / tool output ----------
+playwright-report/
+test-results/
+coverage/
+*.log
+npm-debug.log*
+
+# ---------- OS / editors ----------
+.DS_Store
+.vscode/
+.idea/
