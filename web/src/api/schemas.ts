@@ -1,12 +1,10 @@
-import type { FieldType, ResourceConfig } from '../types';
-
 /** Shapes returned by GET /api/schemas (see api/Schemas/SchemaDefinition.cs). */
-export type SchemaFieldType =
-  | 'string' | 'text' | 'email' | 'number' | 'integer' | 'boolean' | 'date' | 'enum' | 'ref';
+
+export type FieldType = 'string' | 'text' | 'email' | 'number' | 'integer' | 'boolean' | 'date' | 'enum' | 'ref';
 
 export interface SchemaField {
   name: string;
-  type: SchemaFieldType;
+  type: FieldType;
   label: string;
   required: boolean;
   unique: boolean;
@@ -27,7 +25,6 @@ export interface Schema {
   title: string;
   display: string;
   file: string;
-  endpoint: string | null; // e.g. "/api/products"; null when no controller serves this schema
   fields: SchemaField[];
 }
 
@@ -36,48 +33,16 @@ export interface SchemaError {
   message: string;
 }
 
-const UI_TYPE: Record<SchemaFieldType, FieldType> = {
-  string: 'text',
-  text: 'textarea',
-  email: 'email',
-  number: 'number',
-  integer: 'integer',
-  boolean: 'checkbox',
-  date: 'date',
-  enum: 'select',
-  ref: 'ref',
-};
-
-export async function fetchSchemas(): Promise<{ schemas: Schema[]; errors: SchemaError[] }> {
-  const res = await fetch('/api/schemas');
-  if (!res.ok) throw new Error(`Could not load schemas (${res.status})`);
-  return res.json();
+/** A record as the API returns it. */
+export interface DataRecord {
+  id: string;
+  createdAt?: string;
+  updatedAt?: string;
+  [field: string]: unknown;
 }
 
-/** Adapts a JSON schema (that has a controller) to the generic page config used by ResourcePage. */
-export function schemaToResource(s: Schema & { endpoint: string }, all: Schema[]): ResourceConfig {
-  const refs = s.fields.filter((f) => f.type === 'ref').map((f) => f.name);
-  return {
-    key: s.name,
-    title: s.title,
-    endpoint: s.endpoint,
-    // Embed referenced records so tables can show their names instead of ids.
-    listQuery: refs.length ? `?include=${refs.join(',')}` : '',
-    fields: s.fields.map((f) => ({
-      name: f.name,
-      label: f.label,
-      type: UI_TYPE[f.type],
-      required: f.required,
-      showInTable: f.showInTable,
-      options: f.values,
-      default: f.default,
-      min: f.min,
-      max: f.max,
-      minLength: f.minLength,
-      maxLength: f.maxLength,
-      ref: f.ref,
-      refDisplay: all.find((o) => o.name === f.ref)?.display ?? 'id',
-      refEndpoint: all.find((o) => o.name === f.ref)?.endpoint ?? null,
-    })),
-  };
+/** The text that names a record (its schema's display field). */
+export function recordTitle(schema: Schema, record: DataRecord | null | undefined): string {
+  const value = record?.[schema.display];
+  return value == null || value === '' ? (record?.id ?? '') : String(value);
 }

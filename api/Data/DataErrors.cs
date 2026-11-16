@@ -26,8 +26,11 @@ public sealed class NotFoundError(string message) : DataError(message)
     public static NotFoundError Record(string schema, string id) => new($"No {schema} with id \"{id}\".");
 }
 
-/// <summary>409 — duplicate unique value, or a delete blocked by references.</summary>
-public sealed class ConflictError(string message) : DataError(message);
+/// <summary>409 — duplicate unique value (Field set), or a delete blocked by references.</summary>
+public sealed class ConflictError(string message, string? field = null) : DataError(message)
+{
+    public string? Field { get; } = field;
+}
 
 public sealed class DataErrorHandler(IProblemDetailsService problems) : IExceptionHandler
 {
@@ -37,6 +40,8 @@ public sealed class DataErrorHandler(IProblemDetailsService problems) : IExcepti
         {
             ValidationError v => new ValidationProblemDetails(v.Errors.ToDictionary(e => e.Key, e => new[] { e.Value })) { Status = 400 },
             NotFoundError => new ProblemDetails { Status = 404, Title = exception.Message },
+            ConflictError { Field: { } field } => new ValidationProblemDetails(
+                new Dictionary<string, string[]> { [field] = [exception.Message] }) { Status = 409, Title = exception.Message },
             ConflictError => new ProblemDetails { Status = 409, Title = exception.Message },
             _ => null,
         };

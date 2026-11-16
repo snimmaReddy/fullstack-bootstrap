@@ -1,12 +1,15 @@
 # Upstart
 
-This boilerplate has a C# .NET 11 API, MongoDB 8 and a React 19 + TypeScript UI. Each entity is **one JSON file** in `schemas/`, and the API, the MongoDB validation and the UI page all come from that file.
+This boilerplate has a C# .NET 11 API, MongoDB 8 and a React 19 + TypeScript + Mantine UI. Each entity is **one JSON file** in `schemas/`, which drives the MongoDB validation, the API and the UI forms and tables.
+
+The `product`, `supplier` and `contact` schemas are only sample data. Replace them with your own.
 
 For the design, see:
 - [PLAN.md](PLAN.md): phase 1, the API, UI and auth
 - [PLAN-json-schemas.md](PLAN-json-schemas.md): phase 2, JSON schemas and the database lock-down
 - [PLAN-data-helpers.md](PLAN-data-helpers.md): phase 3, the reusable DB helpers, query filters and links between schemas
-- [PLAN-controllers.md](PLAN-controllers.md): phase 4, one controller per API (`api/products`, `api/suppliers`, …)
+- [PLAN-controllers.md](PLAN-controllers.md): phase 4, one controller per API (`api/<collection>`)
+- [PLAN-ui.md](PLAN-ui.md): phase 5, the Mantine UI with left navigation and the list → detail → edit workflow
 
 ## Prerequisites
 
@@ -47,7 +50,8 @@ node scripts/schema.mjs delete product --drop-data  # also drops the collection 
 - **Actions:** `GetAll`, `GetById`, `Create`, `Update`, `Patch` and `Delete`. Each one is a line or two that calls the reusable `Db` helpers.
 - **Editing:** the generated controller is regular code. Add product-specific actions to it, or remove actions you don't want.
 - **Restart:** a new or changed controller needs an API restart (or `dotnet watch`).
-- **No controller:** a schema without one still gets its MongoDB collection and validator, but no API and no UI page.
+- **No controller:** a schema without one still gets its MongoDB collection and validator, but no API.
+- **UI page:** add one line to `web/src/app/entities.ts` (see [UI](#ui)).
 
 To **update** a schema, edit its file and save. While the API runs in Development, it reloads within about a second, updates MongoDB's validator and indexes, and the UI picks up the change when you switch back to the tab. If you save an invalid file, the API keeps serving the last valid version and shows the error at `/api/schemas` and in a banner in the UI.
 
@@ -115,6 +119,34 @@ Values are converted to the field's type. An unknown field, operator or include,
   ```js
   db.getSiblingDB("upstart").products.updateMany({}, { $rename: { oldName: "newName" } })
   ```
+
+## UI
+
+The UI is built on [Mantine](https://mantine.dev). It has:
+- **A left sidebar:** the dashboard, one link per registered entity with a live record count, and any custom pages.
+- **The same workflow for every entity:**
+
+| Route | Page |
+| --- | --- |
+| `/<path>` | Table with search (on the display field), filters (enum/boolean fields), sortable columns and pagination. Search, filter and page state is kept in the URL. |
+| `/<path>/:id` | All fields, formatted. Linked records are shown as links, and records of other registered entities that link here are shown as small tables. Edit and Delete buttons. |
+| `/<path>/new`, `/<path>/:id/edit` | A side drawer with a form generated from the schema. Edits save only the changed fields (PATCH). Server errors, including unique conflicts, show on the right field. |
+| Delete | A confirmation dialog. If the API refuses (e.g. other records link to this one), its message is shown. |
+
+### Add or change UI
+
+| To… | Do this |
+| --- | --- |
+| Add an entity's pages | Add one line to [web/src/app/entities.ts](web/src/app/entities.ts): `{ schema: '<name>', icon: IconSomething }`. Its API is assumed at `/api/<collection>` (the controller template's route). |
+| Adjust an entity | Optional keys on that line: `title`, `path`, `endpoint`, `columns`, `filters`, `defaultSort`, `pageSize` (see [entity/types.ts](web/src/entity/types.ts)). |
+| Add a custom page | Create `web/src/pages/<Name>Page.tsx` and add `{ path, label, icon, component }` to `customPages` in the same file. |
+| Support a new field type | Add it to [web/src/entity/fields.tsx](web/src/entity/fields.tsx) (form input + display). |
+| Change the look | [web/src/app/theme.ts](web/src/app/theme.ts): app name, brand colour, font, radius. |
+
+Reusable building blocks for custom pages:
+- `components/`: `PageHeader`, `EntityTable`, `StatCard`, `ConfirmDelete`, `EmptyState`, `ErrorState`
+- `entity/fields.tsx`: `FieldInput`, `FieldValue`, `RefSelect`
+- `api/hooks.ts`: `useList`, `useRecord`, `useSaveRecord`, `useDeleteRecord`, `useCount`
 
 ## Database access and Compass
 

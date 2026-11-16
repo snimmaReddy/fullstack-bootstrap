@@ -19,8 +19,12 @@ public class SuppliersController(Db db) : ControllerBase
     [HttpGet]
     [ProducesResponseType<List<Record>>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<List<Record>>> GetAll() =>
-        await db.List(Schema, Query.FromRequest(Request));
+    public async Task<ActionResult<List<Record>>> GetAll()
+    {
+        var query = Query.FromRequest(Request);
+        Response.Headers["X-Total-Count"] = (await db.Count(Schema, query)).ToString(); // total before paging
+        return await db.List(Schema, query);
+    }
 
     /// <summary>Get one supplier by id. ?include=... embeds related records.</summary>
     [HttpGet("{id}")]

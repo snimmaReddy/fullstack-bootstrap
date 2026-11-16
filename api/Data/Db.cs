@@ -262,7 +262,7 @@ public sealed partial class Db(SchemaRegistry registry, MongoContext ctx)
             {
                 var field = UniqueIndexRx().Match(message) is { Success: true } m ? m.Groups[1].Value : null;
                 var label = field is null ? "unique value" : s.Find(field)?.Label ?? field;
-                throw new ConflictError($"Another {s.Name} already has this {label}.");
+                throw new ConflictError($"Another {s.Name} already has this {label}.", field);
             }
             if (code == 121)
                 throw new ValidationError("", "The database rejected this document (schema validation failed).");
