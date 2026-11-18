@@ -21,7 +21,7 @@ public static partial class SchemaLoader
     [GeneratedRegex("^[a-z][a-zA-Z0-9]*$")] private static partial Regex FieldRx();
     [GeneratedRegex("([a-z0-9])([A-Z])")] private static partial Regex CamelRx();
 
-    public static Schema Parse(string fileName, string json, IReadOnlySet<string> reservedCollections)
+    public static Schema Parse(string fileName, string json)
     {
         SchemaFile file;
         try
@@ -44,8 +44,6 @@ public static partial class SchemaLoader
         var collection = file.Collection ?? name + "s";
         if (!CollectionRx().IsMatch(collection))
             errors.Add($"\"collection\" \"{collection}\" must start with a lower-case letter and use letters, digits or _.");
-        else if (reservedCollections.Contains(collection))
-            errors.Add($"Collection \"{collection}\" is reserved by the API.");
 
         var fields = new List<Field>();
         if (file.Fields is null || file.Fields.Count == 0)

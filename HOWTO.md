@@ -40,7 +40,6 @@ You only write code for what is specific to your use case: business rules (step 
 | A rule involving state or several fields ("can't resolve twice", "end date after start date") | Controller | a custom action using `Db`, throwing `ValidationError` / `ConflictError` |
 | An action that isn't plain CRUD (approve, resolve, assign, recalculate) | Controller | `[HttpPost("{id}/<action>")]` |
 | Aggregates, counts, summaries | Controller | `[HttpGet("<name>")]` using `db.Count` / `db.List` |
-| Who may call an endpoint | Controller | `[Authorize]` / `[Authorize(Roles = "Admin")]` (auth endpoints already exist) |
 | Standard list/detail/edit screens | UI config | one line in `entities.ts` |
 | Dashboards, overviews, multi-step flows | UI page | `web/src/pages/`, built from `components/ui` |
 

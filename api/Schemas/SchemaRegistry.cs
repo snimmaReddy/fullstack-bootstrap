@@ -121,7 +121,7 @@ public sealed class SchemaRegistry(
             var key = Path.GetFileNameWithoutExtension(file);
             try
             {
-                var s = SchemaLoader.Parse(file, File.ReadAllText(path), MongoContext.TypedCollections);
+                var s = SchemaLoader.Parse(file, File.ReadAllText(path));
                 if (collections.TryGetValue(s.Collection, out var other))
                     throw new SchemaException($"Collection \"{s.Collection}\" is already used by schema \"{other}\".");
                 next[s.Name] = s;

@@ -1,5 +1,4 @@
 using Api.Data;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -7,7 +6,6 @@ using MongoDB.Driver;
 namespace Api.Controllers;
 
 [ApiController]
-[AllowAnonymous]
 [Route("api/health")]
 public class HealthController(MongoContext ctx) : ControllerBase
 {

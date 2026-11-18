@@ -2,12 +2,12 @@
 
 This boilerplate has a C# .NET 11 API, MongoDB 8 and a React 19 + TypeScript + Mantine UI. Each entity is **one JSON file** in `schemas/`, which drives the MongoDB validation, the API and the UI forms and tables.
 
-The `product`, `supplier` and `contact` schemas are only sample data. Replace them with your own.
+The `product` and `supplier` schemas are only sample data. Replace them with your own.
 
 **Building a feature?** Start with [HOWTO.md](HOWTO.md). It walks from a use case to a working full-stack feature (schema → API → business rules → UI pages → custom screen), with a tested worked example.
 
 For the design, see:
-- [PLAN.md](PLAN.md): phase 1, the API, UI and auth
+- [PLAN.md](PLAN.md): phase 1, the API and UI
 - [PLAN-json-schemas.md](PLAN-json-schemas.md): phase 2, JSON schemas and the database lock-down
 - [PLAN-data-helpers.md](PLAN-data-helpers.md): phase 3, the reusable DB helpers, query filters and links between schemas
 - [PLAN-controllers.md](PLAN-controllers.md): phase 4, one controller per API (`api/<collection>`)
@@ -201,9 +201,9 @@ The connection strings are in `.data/credentials.txt`, which is git-ignored. In 
 
 The `_schemas` collection holds each full definition.
 
-In production, set `Mongo__ConnectionString` and `Jwt__Key` as environment variables.
+In production, set `Mongo__ConnectionString` as an environment variable.
 
-The schema data endpoints need no user sign-in. That's fine while everything is bound to localhost. Before exposing the API publicly, add an API-side gate such as an API key or user sign-in.
+The API has no user sign-in. That's fine while everything is bound to localhost. Before exposing the API publicly, add an API-side gate such as an API key or user sign-in.
 
 ## Reusable DB helpers for custom APIs
 
@@ -225,11 +225,5 @@ public async Task<ActionResult<List<Record>>> LowStock([FromQuery] int below = 1
 | `db.Patch(schema, id, data)` | Only the given fields; `null` clears one |
 | `db.Delete(schema, id)` | Refuses (409) while other records link to it |
 
-Records come back as `Record` (a dictionary: `id`, fields, `createdAt`, `updatedAt`, plus includes). See [ReportsController.cs](api/Controllers/ReportsController.cs) for two examples:
-- `GET /api/reports/low-stock?below=10`
-- `GET /api/reports/suppliers/{id}/summary`
+Records come back as `Record` (a dictionary: `id`, fields, `createdAt`, `updatedAt`, plus includes).
 
-## Other API features
-
-- **Auth endpoints:** `POST /api/auth/register | login | logout`, `GET /api/auth/me`. The JWT is set in an HttpOnly cookie, and `Authorization: Bearer` also works.
-- **Typed entities:** for entities that need custom C# logic, write a model inheriting `BaseEntity` and a one-line controller deriving `CrudController<T>`. These require sign-in by default.

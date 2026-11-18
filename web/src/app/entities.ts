@@ -1,4 +1,4 @@
-import { IconAddressBook, IconBox } from '@tabler/icons-react';
+import { IconBox } from '@tabler/icons-react';
 import type { CustomPage, EntityConfig } from '../entity/types';
 
 /**
@@ -10,7 +10,6 @@ import type { CustomPage, EntityConfig } from '../entity/types';
  */
 export const entities: EntityConfig[] = [
   { schema: 'product', icon: IconBox },
-  { schema: 'contact', icon: IconAddressBook },
 ];
 
 /**
